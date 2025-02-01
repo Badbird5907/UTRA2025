@@ -44,6 +44,7 @@ try:
         color_image = numpy.asanyarray(color_frame.get_data())
         depth_map = numpy.asanyarray(depth_frame.get_data())
 
+
         color_socket.send_numpy_array(color_image)
         depth_socket.send_numpy_array(depth_map)        
 finally:
