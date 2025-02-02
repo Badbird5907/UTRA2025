@@ -1,3 +1,6 @@
+import json
+import websocket
+
 class DifferentialDriveController:
     def __init__(self, robot_ip, robot_port, speed_range):
         """
@@ -7,6 +10,8 @@ class DifferentialDriveController:
         self.speed_range = speed_range
         self.robot_ip = robot_ip
         self.robot_port = robot_port
+        # Open a websocket connection to the robot
+        self.ws = websocket.create_connection(f"ws://{self.robot_ip}:{self.robot_port}/motors")
 
     def move(self, left_speed, right_speed):
         """
@@ -18,8 +23,15 @@ class DifferentialDriveController:
             -self.speed_range <= right_speed <= self.speed_range):
             raise ValueError(f"Speed must be between -{self.speed_range} and {self.speed_range}")
         
-        # Implementation for WS and setting motor speeds
-        pass
+        json_data = {
+            "command": "motor",
+            "data": {
+                "left": left_speed,
+                "right": right_speed
+            }
+        }
+        
+        self.ws.send(json.dumps(json_data))
 
     def stop(self):
         """Stop both motors"""

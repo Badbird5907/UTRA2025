@@ -6,7 +6,9 @@ import cv2
 import numpy as np
 from openvino import Core
 import math
-
+from PID_controller import PIDController
+from globals import *
+from ws_motor_controller import DifferentialDriveController
 # Initialize models
 core = Core()
 # Face detection model
@@ -31,6 +33,11 @@ emotions = ['neutral', 'happy', 'sad', 'surprise', 'anger']
 
 show_crops = True
 
+PID_theta = PIDController(kp=0.1)
+PID_distance = PIDController(kp=0.1)
+
+drivebase = DifferentialDriveController(robot_ip, robot_port, 1)
+
 def crop_face(frame, detection, distance, k_padding=100):
     padding = int(k_padding * distance)
     xmin = max(int(detection[3] * frame.shape[1]) - padding, 0)
@@ -50,6 +57,8 @@ def process_frame(frame, depth_map):
     # Run face detection
     results = compiled_face_detector([input_image])[face_output_layer]
     detections = results[0][0]
+
+    face_data = []
     
     # Process detections
     for detection in detections:
@@ -104,8 +113,50 @@ def process_frame(frame, depth_map):
                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
             cv2.putText(frame, dist_text, (xmin, ymax + 60),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+        
+            face_data.append({
+                'distance_mm': distance,
+                'age_years': int(age),
+                'gender': {
+                    'label': gender,
+                    'confidence': float(gender_prob[0][0])
+                },
+                'emotion': emotion_label,
+                'bbox': {
+                    'xmin': xmin,
+                    'ymin': ymin,
+                    'xmax': xmax,
+                    'ymax': ymax
+                },
+                'center': {
+                    'x': face_center_x,
+                    'y': face_center_y
+                },
+                'size': (xmax - xmin, ymax - ymin)
+            })
+
+    face_data = sorted(face_data, key=lambda x: x['distance_mm'])
     
-    return frame
+    return frame, face_data
+
+def move_robot(face_data):
+    face_data = face_data[0]
+    face_center = face_data['center']
+    face_size = face_data['size']
+    face_distance = face_data['distance_mm']
+
+    theta = PID_theta.compute(resolution_x/2, face_center['x'], 1)
+    distance = PID_distance.compute(400, face_distance, 1)
+
+    left_speed = distance + theta
+    right_speed = distance - theta
+
+    # drivebase.move(left_speed, right_speed)
+    print(f"Left: {left_speed}, Right: {right_speed}")
+
+
+
+    
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -121,7 +172,9 @@ try:
         color_frame = color_socket.receive_array()
         depth_map = depth_socket.receive_array()
 
-        color_frame = process_frame(color_frame, depth_map)
+        color_frame, face_data = process_frame(color_frame, depth_map)
+
+
 
         if color_frame is not None:
             cv2.imshow("Color Frame", color_frame)

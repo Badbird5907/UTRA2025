@@ -3,11 +3,12 @@ import numpy
 from io import BytesIO
 from npsocket import SocketNumpyArray
 import socket
+from globals import *
 
 pipeline = rs.pipeline()
 config = rs.config()
-config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 60)
-config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 60)
+config.enable_stream(rs.stream.depth, resolution_x, resolution_y, rs.format.z16, 60)
+config.enable_stream(rs.stream.color, resolution_x, resolution_y, rs.format.bgr8, 60)
 pipeline.start(config)
 
 hole_filling = rs.hole_filling_filter(2)
@@ -44,8 +45,9 @@ try:
         color_image = numpy.asanyarray(color_frame.get_data())
         depth_map = numpy.asanyarray(depth_frame.get_data())
 
+        
 
         color_socket.send_numpy_array(color_image)
-        depth_socket.send_numpy_array(depth_map)        
+        depth_socket.send_numpy_array(depth_map)   
 finally:
     pipeline.stop()
