@@ -14,10 +14,12 @@
     "ai": "^4.1.16",
     "elevenlabs": "^1.50.4",
     "ollama-ai-provider": "^1.2.0",
-    "redis": "^4.7.0"
+    "redis": "^4.7.0",
+    "ws": "^8.18.0"
   },
   "devDependencies": {
     "@types/node": "^22.13.0",
+    "@types/ws": "^8.5.14",
     "dotenv-cli": "^8.0.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3"
