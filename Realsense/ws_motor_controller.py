@@ -29,12 +29,6 @@ class DifferentialDriveController:
         if not self.ws:
             self.connect()
         
-        if self.ws.closed:
-            self.connect()
-        
-        if not self.ws.open:
-            print("Connection not open")
-            return
 
 
         # Cap the speeds to the allowed range
