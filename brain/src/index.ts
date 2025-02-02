@@ -15,10 +15,6 @@ if (!process.env.ELEVENLABS_API_KEY) {
   throw new Error("ELEVENLABS_API_KEY is not set");
 }
 
-const elevenlabs = new ElevenLabsClient({
-  apiKey: process.env.ELEVENLABS_API_KEY,
-});
-
 const redis = createClient({
   url: process.env.REDIS_URL,
 });
@@ -29,13 +25,20 @@ const PROMPT = fs.readFileSync("prompts/system.txt", "utf8");
 const chat = ollama("llama3.2:1b", {})
 const messages: CoreMessage[] = []
 const publisher = redis.duplicate();
-await publisher.connect();
+const kv = redis.duplicate();
+await Promise.all([
+  publisher.connect(),
+  kv.connect(),
+]);
+
+
 
 let prevAge: string | undefined;
 let prevGender: string | undefined;
 let prevMood: string | undefined;
 
 redis.subscribe("ai:trigger", async (message: string) => {
+  kv.set("ai:lock", "true");
   console.log(message);
   const { age, gender, mood, text } = JSON.parse(message);
   
@@ -146,6 +149,7 @@ redis.subscribe("ai:trigger", async (message: string) => {
     text: generatedText,
     messages
   }));
+  kv.del("ai:lock");
 });
 
 
