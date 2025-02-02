@@ -17,8 +17,10 @@ from sys import platform
 
 
 def main():
+    print("Starting up...")
     # Load environment variables
     load_dotenv()
+    print("Environment variables loaded.")
     
     redis_client = redis.Redis(
         host=os.getenv('REDIS_HOST', 'localhost'),
@@ -26,6 +28,7 @@ def main():
         password=os.getenv('REDIS_PASSWORD', None),
         decode_responses=True
     )
+    print("Redis client connected.")
     
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", default="tiny", help="Model to use",
@@ -36,7 +39,7 @@ def main():
                         help="Energy level for mic to detect.", type=int)
     parser.add_argument("--record_timeout", default=2,
                         help="How real time the recording is in seconds.", type=float)
-    parser.add_argument("--phrase_timeout", default=3,
+    parser.add_argument("--phrase_timeout", default=5,
                         help="How much empty space between recordings before we "
                              "consider it a new line in the transcription.", type=float)
     if 'linux' in platform:
@@ -145,10 +148,12 @@ def main():
                 if phrase_complete:
                     transcription.append(text)
                     # Publish new transcription line to Redis
-                    try:
-                        redis_client.publish('ai:trigger', json.dumps({"text": text}))
-                    except Exception as e:
-                        print(f"Failed to publish to Redis: {e}")
+                    lock = redis_client.get("ai:lock")
+                    if (lock is None) or (lock == "false"):
+                        try:
+                            redis_client.publish('ai:trigger', json.dumps({"text": text}))
+                        except Exception as e:
+                            print(f"Failed to publish to Redis: {e}")
                 else:
                     transcription[-1] = text
 

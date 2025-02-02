@@ -1,0 +1,11 @@
+redis
+python-dotenv
+setuptools
+pyaudio
+SpeechRecognition
+torch
+torchvision
+torchaudio
+numpy
+git+https://github.com/openai/whisper.git
+--extra-index-url https://download.pytorch.org/whl/cu118
