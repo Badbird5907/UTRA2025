@@ -252,7 +252,10 @@ try:
         if cv2.waitKey(25) & 0xFF == ord("q"):
             break
 
-        move_robot(face_data)
+        try:
+            move_robot(face_data)
+        except Exception as e:
+            logger.error(f"Error moving robot: {e}")
 
 except KeyboardInterrupt:
     logger.info("Shutting down...")
