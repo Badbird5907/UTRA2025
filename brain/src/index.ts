@@ -33,15 +33,14 @@ redis.subscribe("ai:trigger", async (message: string) => {
   kv.set("ai:lock", "true");
   console.log(message);
   
-  const { age, gender, mood, text } = JSON.parse(message);
-  const a = age ?? await kv.get("age");
-  const g = gender ?? await kv.get("gender");
-  const m = mood ?? await kv.get("mood");
-  
+  const { text } = JSON.parse(message);
+
+  const jsonData = await kv.get("face_data");
+
   const textStr = text ? `: ${text}` : "";
   messages.push({
     role: "user",
-    content: `Age: ${a}, Gender: ${g}, Mood: ${m}${textStr}`
+    content: `${jsonData}${textStr}`
   })
 
   console.log("Prompting", messages)
