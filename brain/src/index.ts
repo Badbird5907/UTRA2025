@@ -19,8 +19,6 @@ const redis = createClient({
   url: process.env.REDIS_URL,
 });
 
-redis.connect();
-
 const PROMPT = fs.readFileSync("prompts/system.txt", "utf8");
 const chat = ollama("llama3.2:1b", {})
 const messages: CoreMessage[] = []
@@ -29,27 +27,23 @@ const kv = redis.duplicate();
 await Promise.all([
   publisher.connect(),
   kv.connect(),
+  redis.connect(),
 ]);
 
-
-
-let prevAge: string | undefined;
-let prevGender: string | undefined;
-let prevMood: string | undefined;
 
 redis.subscribe("ai:trigger", async (message: string) => {
   kv.set("ai:lock", "true");
   console.log(message);
-  const { age, gender, mood, text } = JSON.parse(message);
   
-  prevAge = age ?? prevAge;
-  prevGender = gender ?? prevGender;
-  prevMood = mood ?? prevMood;
+  const { age, gender, mood, text } = JSON.parse(message);
+  const a = age ?? await kv.get("age");
+  const g = gender ?? await kv.get("gender");
+  const m = mood ?? await kv.get("mood");
   
   const textStr = text ? `: ${text}` : "";
   messages.push({
     role: "user",
-    content: `Age: ${prevAge}, Gender: ${prevGender}, Mood: ${prevMood}${textStr}`
+    content: `Age: ${a}, Gender: ${g}, Mood: ${m}${textStr}`
   })
 
   console.log("Prompting", messages)
@@ -151,7 +145,3 @@ redis.subscribe("ai:trigger", async (message: string) => {
   }));
   kv.del("ai:lock");
 });
-
-
-
-
