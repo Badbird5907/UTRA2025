@@ -116,6 +116,13 @@ def main():
 
     # Cue the user that we're ready to go.
     print("Model loaded.\n")
+    
+    if (lock is None) or (lock == "false"):
+        try:
+            redis_client.publish('ai:trigger', json.dumps({}))
+        except Exception as e:
+            print(f"Failed to publish to Redis: {e}")
+    
 
     while True:
         try:
