@@ -14,7 +14,7 @@ IN2 = 24 # Direction
 
 # Right motor
 ENB = 19 # PWM (physical pin 35)
-IN3 = 27 # Direction
+IN3 = 26 # Direction
 IN4 = 22 # Direction
 
 GPIO.setmode(GPIO.BCM)
@@ -39,7 +39,6 @@ def set_motor(left, right): # -255 to 255
     # right
     if right >= 0:
         GPIO.output(IN3, GPIO.HIGH)
-
         GPIO.output(IN4, GPIO.LOW)
     else:
         GPIO.output(IN3, GPIO.LOW)
