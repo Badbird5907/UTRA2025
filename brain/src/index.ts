@@ -18,7 +18,7 @@ const redis = createClient({
 });
 
 const PROMPT = fs.readFileSync("prompts/system.txt", "utf8");
-const chat = ollama("llama3.2:1b", {})
+const chat = ollama("llama3.1", {})
 const messages: CoreMessage[] = []
 const publisher = redis.duplicate();
 const kv = redis.duplicate();
