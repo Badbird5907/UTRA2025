@@ -1,9 +1,7 @@
 import { createClient } from "redis";
 import fs from "fs";
 import { ollama } from "ollama-ai-provider";
-import { CoreMessage, generateText, streamText } from "ai";
-import { ElevenLabsClient, stream } from "elevenlabs";
-import { Readable } from "stream";
+import { CoreMessage, streamText } from "ai";
 import { spawn } from 'child_process';
 
 console.log("Hello World!");
