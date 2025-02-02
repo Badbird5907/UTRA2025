@@ -9,6 +9,34 @@ import math
 from PID_controller import PIDController
 from globals import *
 from ws_motor_controller import DifferentialDriveController
+
+
+import pyrealsense2 as rs
+import numpy
+from io import BytesIO
+from npsocket import SocketNumpyArray
+import socket
+from globals import *
+
+pipeline = rs.pipeline()
+config = rs.config()
+config.enable_stream(rs.stream.depth, resolution_x, resolution_y, rs.format.z16, 60)
+config.enable_stream(rs.stream.color, resolution_x, resolution_y, rs.format.bgr8, 60)
+pipeline.start(config)
+
+hole_filling = rs.hole_filling_filter(2)
+temporal = rs.temporal_filter()
+spatial = rs.spatial_filter()
+
+
+colorizer = rs.colorizer()
+
+# align depth and color frames
+align_to = rs.stream.color
+align = rs.align(align_to)
+
+
+
 # Initialize models
 core = Core()
 # Face detection model
@@ -38,7 +66,7 @@ PID_distance = PIDController(kp=0.1)
 
 drivebase = DifferentialDriveController(robot_ip, robot_port, 1)
 
-def crop_face(frame, detection, distance, k_padding=100):
+def crop_face(frame, detection, distance, k_padding=0):
     padding = int(k_padding * distance)
     xmin = max(int(detection[3] * frame.shape[1]) - padding, 0)
     ymin = max(int(detection[4] * frame.shape[0]) - padding, 0)
@@ -140,6 +168,8 @@ def process_frame(frame, depth_map):
     return frame, face_data
 
 def move_robot(face_data):
+    if not face_data:
+        return
     face_data = face_data[0]
     face_center = face_data['center']
     face_size = face_data['size']
@@ -151,8 +181,9 @@ def move_robot(face_data):
     left_speed = distance + theta
     right_speed = distance - theta
 
-    # drivebase.move(left_speed, right_speed)
     print(f"Left: {left_speed}, Right: {right_speed}")
+    # Move the drivebase it is a async function
+    drivebase.move(left_speed, right_speed)
 
 
 
@@ -162,26 +193,40 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-color_socket = SocketNumpyArray()
-color_socket.initalize_receiver(1000)
-
-depth_socket = SocketNumpyArray()
-depth_socket.initalize_receiver(1001)
 try:
     while True:
-        color_frame = color_socket.receive_array()
-        depth_map = depth_socket.receive_array()
+        # color_frame = color_socket.receive_array()
+        # depth_map = depth_socket.receive_array()
 
-        color_frame, face_data = process_frame(color_frame, depth_map)
+        frames = pipeline.wait_for_frames()
+        frames = align.process(frames)
+        
+        depth_frame = frames.get_depth_frame()
+        depth_frame = hole_filling.process(depth_frame)
+        depth_frame = temporal.process(depth_frame)
+        depth_frame = spatial.process(depth_frame).as_depth_frame()
+        if not depth_frame:
+            continue
+        color_frame = frames.get_color_frame()
+        if not color_frame:
+            continue
+        color_image = numpy.asanyarray(color_frame.get_data())
+        depth_map = numpy.asanyarray(depth_frame.get_data())
 
 
 
-        if color_frame is not None:
-            cv2.imshow("Color Frame", color_frame)
+        color_image, face_data = process_frame(color_image, depth_map)
+
+
+
+        if color_image is not None:
+            cv2.imshow("Color Frame", color_image)
         
         # Press Q on keyboard to exit
         if cv2.waitKey(25) & 0xFF == ord("q"):
             break
+
+        move_robot(face_data)
 
 except KeyboardInterrupt:
     logger.info("Shutting down...")

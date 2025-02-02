@@ -1,6 +1,5 @@
-python3 -m venv ./.venv
-sorce ./.venv/bin/activate
-python3 ./numpy-using-socekt/setup.py install
-pip install -r ./requirements.txt
-omz_downloader --list models.lst 
-
+cd ~/librealsense
+mkdir  build  && cd build
+cmake .. -DBUILD_EXAMPLES=true -DCMAKE_BUILD_TYPE=Release -DFORCE_LIBUVC=true
+make -j1
+sudo make install
