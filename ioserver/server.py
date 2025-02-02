@@ -6,7 +6,7 @@ import asyncio
 from websockets.asyncio.server import serve
 import json
 import RPi.GPIO as GPIO
-
+import serial
 # Left motor
 ENA = 18 # PWM (physical pin 12)
 IN1 = 23 # Direction
@@ -63,9 +63,21 @@ async def echo(websocket):
             print("Motor command:", left, right)
             set_motor(left, right) # { "command": "motor", "data": { "left": 100, "right": 100 } }
             await websocket.send(json.dumps({"left": left, "right": right}))
+        if data.get("command") == "serial":
+            serial_data = data.get("data", {})
+            print("Serial command:", serial_data)
+            dev = "/dev/ttyUSB0"
+            baud = 9600
+            ser = serial.Serial(dev, baud)
+            ser.write(serial_data.encode())
+            ser.close()
+            await websocket.send(json.dumps({"serial": serial_data}))
+
+
 
 async def main():
     async with serve(echo, "0.0.0.0", 8765):
+        print("Server started on port 8765")
         await asyncio.Future()  # run forever
 
 if __name__ == "__main__":
