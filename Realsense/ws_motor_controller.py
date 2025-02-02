@@ -1,5 +1,7 @@
 import json
 import websocket
+import threading
+import time
 
 class DifferentialDriveController:
     def __init__(self, robot_ip, robot_port, speed_range):
@@ -12,14 +14,50 @@ class DifferentialDriveController:
         self.robot_ip = robot_ip
         self.robot_port = robot_port
         self.ws = None
+        self.connected = False
+        self.connect_lock = threading.Lock()
+
+    def on_message(self, ws, message):
+        print(f"Received: {message}")
+
+    def on_error(self, ws, error):
+        print(f"Error: {error}")
+        self.connected = False
+
+    def on_close(self, ws, close_status_code, close_msg):
+        print("Connection closed")
+        self.connected = False
+
+    def on_open(self, ws):
+        print("Connection opened")
+        self.connected = True
 
     def connect(self):
         """Establish websocket connection"""
         uri = f"ws://{self.robot_ip}:{self.robot_port}/motor"
-
         print(f"Connecting to {uri}")
-        self.ws = websocket.WebSocket()
-        self.ws.connect(uri)
+        
+        with self.connect_lock:
+            if not self.connected:
+                self.ws = websocket.WebSocketApp(uri,
+                                               on_open=self.on_open,
+                                               on_message=self.on_message,
+                                               on_error=self.on_error,
+                                               on_close=self.on_close)
+                
+                # Start the WebSocket connection in a separate thread
+                wst = threading.Thread(target=self.ws.run_forever)
+                wst.daemon = True
+                wst.start()
+                
+                # Wait for connection to be established
+                timeout = 5  # seconds
+                start_time = time.time()
+                while not self.connected and time.time() - start_time < timeout:
+                    time.sleep(0.1)
+                
+                if not self.connected:
+                    raise ConnectionError("Failed to connect to WebSocket server")
 
     def move(self, left_speed, right_speed):
         """
@@ -28,13 +66,8 @@ class DifferentialDriveController:
         @param right_speed: Speed for right motor (-100 to 100)
         """
         print(f"Moving: Left: {left_speed}, Right: {right_speed}")
-        if not self.ws:
-            self.connect()
         
-        # Check if websocket connection is established
-        try:
-            self.ws.ping()
-        except:
+        if not self.connected:
             self.connect()
 
         # Cap the speeds to the allowed range
@@ -59,4 +92,5 @@ class DifferentialDriveController:
         """Close the websocket connection"""
         if self.ws:
             self.ws.close()
+            self.connected = False
             self.ws = None
