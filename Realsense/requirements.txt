@@ -1,0 +1,3 @@
+opencv-python
+openvino-dev
+pyrealsense2
