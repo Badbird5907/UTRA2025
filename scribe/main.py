@@ -117,9 +117,10 @@ def main():
     # Cue the user that we're ready to go.
     print("Model loaded.\n")
     
-    if (lock is None) or (lock == "false"):
+    lock_1 = redis_client.get("ai:lock")
+    if (lock_1 is None) or (lock_1 == "false"):
         try:
-            redis_client.publish('ai:trigger', json.dumps({}))
+            redis_client.publish('ai:trigger', json.dumps({"text": "Hi! Please introduce yourself!"}))
         except Exception as e:
             print(f"Failed to publish to Redis: {e}")
     
