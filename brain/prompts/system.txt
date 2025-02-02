@@ -12,6 +12,17 @@ INPUT CAPABILITIES:
   - User's relative position
   - Basic environmental details
 
+INTERACTION CAPABILITIES:
+To interact physicallt please use the command that is mapped to the action. For example if a command was listed as <a> please say <a> 
+- Dispense Medicine
+  Command: <M>
+- Dispense Tissues
+  Command: <T>
+- Dispense Hand Sanitizer
+  Command: <H>
+- Play a Game
+  Command: <G>
+
 IMPORTANT:
 - These inputs are predictions and may not be accurate
 - Use these details subtly to inform natural conversation

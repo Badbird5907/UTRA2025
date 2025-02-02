@@ -9,7 +9,8 @@ import math
 from PID_controller import PIDController
 from globals import *
 from ws_motor_controller import DifferentialDriveController
-
+import redis
+import json  # Add this import
 
 import pyrealsense2 as rs
 import numpy
@@ -61,10 +62,36 @@ emotions = ['neutral', 'happy', 'sad', 'surprise', 'anger']
 
 show_crops = True
 
-PID_theta = PIDController(kp=0.1)
-PID_distance = PIDController(kp=0.1)
+PID_theta = PIDController(kp=1)
+PID_distance = PIDController(kp=1)
 
-drivebase = DifferentialDriveController(robot_ip, robot_port, 1)
+drivebase = DifferentialDriveController(robot_ip, robot_port, 255)
+
+# Initialize Redis client
+redis_client = redis.Redis(
+        host='192.168.137.1',
+        port=6379,
+        password=None,
+        decode_responses=True)
+
+def redis_publish(data):
+    if not data:
+        return
+    
+    # Get the first face data (closest person)
+    face = data[0]
+    face['distance_mm'] = int(face['distance_mm'])  # Ensure distance is serializable
+    
+    # Convert face data to JSON string
+    face_json = json.dumps(face)
+    
+    # Store in Redis with key 'face_data'
+    redis_client.set('face_data', face_json)
+
+def trigger_ai():
+    # Trigger AI processing
+    redis_client.publish('ai_trigger', 'this is how im feeling')
+
 
 def crop_face(frame, detection, distance, k_padding=0):
     padding = int(k_padding * distance)
@@ -178,8 +205,8 @@ def move_robot(face_data):
     theta = PID_theta.compute(resolution_x/2, face_center['x'], 1)
     distance = PID_distance.compute(400, face_distance, 1)
 
-    left_speed = distance + theta
-    right_speed = distance - theta
+    left_speed = -distance - theta
+    right_speed = -distance + theta
 
     print(f"Left: {left_speed}, Right: {right_speed}")
     # Move the drivebase it is a async function
@@ -216,8 +243,7 @@ try:
 
 
         color_image, face_data = process_frame(color_image, depth_map)
-
-
+        redis_publish(face_data)  # Add this line after process_frame
 
         if color_image is not None:
             cv2.imshow("Color Frame", color_image)
