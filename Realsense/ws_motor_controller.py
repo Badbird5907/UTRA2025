@@ -1,10 +1,8 @@
 import json
-import asyncio
-import websockets
+import websocket
 
 class DifferentialDriveController:
     def __init__(self, robot_ip, robot_port, speed_range):
-
         print("DifferentialDriveController")
         """
         Constructor for DifferentialDriveController
@@ -15,14 +13,15 @@ class DifferentialDriveController:
         self.robot_port = robot_port
         self.ws = None
 
-    async def connect(self):
+    def connect(self):
         """Establish websocket connection"""
         uri = f"ws://{self.robot_ip}:{self.robot_port}/motor"
 
         print(f"Connecting to {uri}")
-        self.ws = await websockets.connect(uri)
+        self.ws = websocket.WebSocket()
+        self.ws.connect(uri)
 
-    async def move(self, left_speed, right_speed):
+    def move(self, left_speed, right_speed):
         """
         Move robot using differential drive
         @param left_speed: Speed for left motor (-100 to 100)
@@ -30,13 +29,13 @@ class DifferentialDriveController:
         """
         print(f"Moving: Left: {left_speed}, Right: {right_speed}")
         if not self.ws:
-            await self.connect()
+            self.connect()
         
         # Check if websocket connection is established
-        if not self.ws.open:
-            await self.connect()
-
-
+        try:
+            self.ws.ping()
+        except:
+            self.connect()
 
         # Cap the speeds to the allowed range
         left_speed = max(-self.speed_range, min(self.speed_range, left_speed))
@@ -50,14 +49,14 @@ class DifferentialDriveController:
             }
         }
         
-        await self.ws.send(json.dumps(json_data))
+        self.ws.send(json.dumps(json_data))
 
-    async def stop(self):
+    def stop(self):
         """Stop both motors"""
-        await self.move(0, 0)
+        self.move(0, 0)
 
-    async def close(self):
+    def close(self):
         """Close the websocket connection"""
         if self.ws:
-            await self.ws.close()
+            self.ws.close()
             self.ws = None

@@ -1,3 +1,4 @@
 opencv-python
 openvino-dev
 pyrealsense2
+websocket-client
