@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Motor Control Client</title>
+</head>
+<body>
+  <h1>Motor Control Client</h1>
+  <p>Use W, A, S, D keys to control the motors.</p>
+  <script>
+    // Connect to the WebSocket server (adjust URL as needed)
+    const ws = new WebSocket("ws://bot.local:8765");
+
+    ws.onopen = () => {
+      console.log("Connected to server.");
+    };
+
+    ws.onmessage = (event) => {
+      console.log("Received:", event.data);
+    };
+
+    ws.onerror = (error) => {
+      console.error("WebSocket error:", error);
+    };
+
+    // Function to send motor command
+    function sendMotorCommand(left, right) {
+      const command = {
+        command: "motor",
+        data: { left, right }
+      };
+      ws.send(JSON.stringify(command));
+    }
+
+    // Listen for keydown events
+    window.addEventListener('keydown', function(event) {
+      if (event.repeat) return; // Ignore key repeats
+      switch(event.key.toLowerCase()) {
+        case 'w': // forward
+          sendMotorCommand(255, 255);
+          break;
+        case 's': // backward
+          sendMotorCommand(-255, -255);
+          break;
+        case 'a': // turn left
+          sendMotorCommand(-255, 255);
+          break;
+        case 'd': // turn right
+          sendMotorCommand(255, -255);
+          break;
+      }
+    });
+
+    // Optionally, listen for keyup events to stop the motors
+    window.addEventListener('keyup', function(event) {
+      switch(event.key.toLowerCase()) {
+        case 'w':
+        case 'a':
+        case 's':
+        case 'd':
+          sendMotorCommand(0, 0);
+          break;
+      }
+    });
+  </script>
+</body>
+</html>
